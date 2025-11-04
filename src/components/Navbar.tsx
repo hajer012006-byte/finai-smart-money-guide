@@ -13,9 +13,9 @@ export const Navbar = () => {
         <div className="flex items-center justify-between h-16">
           <Link to="/" className="flex items-center gap-2">
             <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center">
-              <span className="text-white font-bold text-xl">F</span>
+              <span className="text-white font-bold text-xl">C</span>
             </div>
-            <span className="font-bold text-xl">FinAI</span>
+            <span className="font-bold text-xl">CashIQ</span>
           </Link>
 
           <div className="flex items-center gap-2">
