@@ -96,7 +96,7 @@ const Dashboard = () => {
       
       <main className="container mx-auto px-4 pt-24 pb-8">
         <div className="mb-8 animate-fade-in">
-          <h1 className="text-3xl font-bold mb-2">مرحباً، أحمد 👋</h1>
+          <h1 className="text-3xl font-bold mb-2">مرحباً 👋</h1>
           <p className="text-muted-foreground">إليك ملخص وضعك المالي لهذا الشهر</p>
         </div>
 
