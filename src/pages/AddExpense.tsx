@@ -12,19 +12,46 @@ import { ar } from "date-fns/locale";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 const AddExpense = () => {
-  const [date, setDate] = useState<Date>();
+  const [date, setDate] = useState<Date>(new Date());
+  const [name, setName] = useState("");
+  const [category, setCategory] = useState("");
+  const [amount, setAmount] = useState("");
+  const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { user } = useAuth();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast({
-      title: "تم الحفظ بنجاح ✅",
-      description: "تم إضافة المصروف الجديد",
+    setLoading(true);
+
+    const { error } = await supabase.from("expenses").insert({
+      user_id: user?.id,
+      name,
+      category,
+      amount: parseFloat(amount),
+      date: date?.toISOString().split('T')[0],
     });
-    setTimeout(() => navigate("/"), 1500);
+
+    if (error) {
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ أثناء حفظ المصروف",
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "تم الحفظ بنجاح ✅",
+        description: "تم إضافة المصروف الجديد",
+      });
+      setTimeout(() => navigate("/"), 1500);
+    }
+
+    setLoading(false);
   };
 
   return (
@@ -47,21 +74,23 @@ const AddExpense = () => {
                   placeholder="مثلاً: وجبة غداء"
                   required
                   className="text-right"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
                 />
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="category">الفئة</Label>
-                <Select required>
+                <Select required value={category} onValueChange={setCategory}>
                   <SelectTrigger className="text-right">
                     <SelectValue placeholder="اختر الفئة" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="food">طعام</SelectItem>
-                    <SelectItem value="transport">مواصلات</SelectItem>
-                    <SelectItem value="bills">فواتير</SelectItem>
-                    <SelectItem value="entertainment">ترفيه</SelectItem>
-                    <SelectItem value="other">أخرى</SelectItem>
+                    <SelectItem value="طعام">طعام</SelectItem>
+                    <SelectItem value="مواصلات">مواصلات</SelectItem>
+                    <SelectItem value="فواتير">فواتير</SelectItem>
+                    <SelectItem value="ترفيه">ترفيه</SelectItem>
+                    <SelectItem value="أخرى">أخرى</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -76,6 +105,8 @@ const AddExpense = () => {
                   min="0"
                   step="0.01"
                   className="text-right"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
                 />
               </div>
 
@@ -103,8 +134,8 @@ const AddExpense = () => {
               </div>
 
               <div className="flex gap-4 pt-4">
-                <Button type="submit" className="flex-1 gradient-primary shadow-lg">
-                  حفظ المصروف
+                <Button type="submit" className="flex-1 gradient-primary shadow-lg" disabled={loading}>
+                  {loading ? "جاري الحفظ..." : "حفظ المصروف"}
                 </Button>
                 <Button type="button" variant="outline" className="flex-1" onClick={() => navigate("/")}>
                   إلغاء

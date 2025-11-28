@@ -1,9 +1,11 @@
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Home, PlusCircle, Target, TrendingUp, Bell } from "lucide-react";
+import { Home, PlusCircle, Target, TrendingUp, Bell, LogOut } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 export const Navbar = () => {
   const location = useLocation();
+  const { signOut } = useAuth();
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -77,6 +79,15 @@ export const Navbar = () => {
                 <Bell className="w-4 h-4 ml-2" />
                 التنبيهات
               </Link>
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={signOut}
+            >
+              <LogOut className="w-4 h-4 ml-2" />
+              خروج
             </Button>
           </div>
         </div>
