@@ -5,90 +5,129 @@ import { RecentTransactions } from "@/components/RecentTransactions";
 import { Wallet, TrendingUp, TrendingDown, PiggyBank } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+
+interface Expense {
+  id: string;
+  name: string;
+  category: string;
+  amount: number;
+  date: string;
+}
 
 const Dashboard = () => {
-  // بيانات تجريبية
+  const { user } = useAuth();
+  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchExpenses = async () => {
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from("expenses")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("date", { ascending: false })
+        .limit(10);
+
+      if (!error && data) {
+        setExpenses(data);
+      }
+      setLoading(false);
+    };
+
+    fetchExpenses();
+
+    // Subscribe to realtime changes
+    const channel = supabase
+      .channel("expenses_changes")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "expenses",
+          filter: `user_id=eq.${user?.id}`,
+        },
+        () => {
+          fetchExpenses();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
+
+  // Calculate statistics
+  const totalExpenses = expenses.reduce((sum, exp) => sum + Number(exp.amount), 0);
+  const monthlyIncome = 5000; // This could be fetched from a separate table
+  const savings = monthlyIncome - totalExpenses;
+  const savingsRate = monthlyIncome > 0 ? ((savings / monthlyIncome) * 100).toFixed(0) : 0;
+
+  // Group expenses by category for chart
+  const categoryData = expenses.reduce((acc: any[], exp) => {
+    const existing = acc.find((item) => item.name === exp.category);
+    if (existing) {
+      existing.value += Number(exp.amount);
+    } else {
+      acc.push({ name: exp.category, value: Number(exp.amount) });
+    }
+    return acc;
+  }, []);
+
+  // Format transactions for RecentTransactions component
+  const transactions = expenses.map((exp) => ({
+    id: exp.id,
+    name: exp.name,
+    category: exp.category,
+    amount: Number(exp.amount),
+    date: new Date(exp.date).toLocaleDateString("ar-EG"),
+    type: "expense" as const,
+  }));
+
   const stats = [
     {
       title: "إجمالي الدخل",
-      value: "5,000 جنيه",
+      value: `${monthlyIncome.toLocaleString()} جنيه`,
       icon: Wallet,
       trend: { value: "12%", isPositive: true },
       variant: "success" as const,
     },
     {
       title: "إجمالي المصروفات",
-      value: "3,450 جنيه",
+      value: `${totalExpenses.toLocaleString()} جنيه`,
       icon: TrendingDown,
       trend: { value: "5%", isPositive: false },
       variant: "danger" as const,
     },
     {
       title: "المدخرات المتوقعة",
-      value: "1,550 جنيه",
+      value: `${savings.toLocaleString()} جنيه`,
       icon: PiggyBank,
       trend: { value: "18%", isPositive: true },
       variant: "success" as const,
     },
     {
       title: "نسبة الادخار",
-      value: "31%",
+      value: `${savingsRate}%`,
       icon: TrendingUp,
       trend: { value: "3%", isPositive: true },
       variant: "default" as const,
     },
   ];
 
-  const expenseData = [
-    { name: "طعام", value: 1200 },
-    { name: "مواصلات", value: 800 },
-    { name: "فواتير", value: 600 },
-    { name: "ترفيه", value: 450 },
-    { name: "أخرى", value: 400 },
-  ];
-
-  const transactions = [
-    {
-      id: "1",
-      name: "ماكدونالدز",
-      category: "طعام",
-      amount: 85,
-      date: "اليوم",
-      type: "expense" as const,
-    },
-    {
-      id: "2",
-      name: "أوبر",
-      category: "مواصلات",
-      amount: 35,
-      date: "أمس",
-      type: "expense" as const,
-    },
-    {
-      id: "3",
-      name: "راتب شهري",
-      category: "دخل",
-      amount: 5000,
-      date: "منذ يومين",
-      type: "income" as const,
-    },
-    {
-      id: "4",
-      name: "نتفليكس",
-      category: "ترفيه",
-      amount: 120,
-      date: "منذ 3 أيام",
-      type: "expense" as const,
-    },
-    {
-      id: "5",
-      name: "فاتورة الكهرباء",
-      category: "فواتير",
-      amount: 200,
-      date: "منذ 4 أيام",
-      type: "expense" as const,
-    },
-  ];
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -112,10 +151,22 @@ const Dashboard = () => {
         {/* الرسوم البيانية والمعاملات */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           <div className="animate-slide-up" style={{ animationDelay: "400ms" }}>
-            <ExpenseChart data={expenseData} />
+            {categoryData.length > 0 ? (
+              <ExpenseChart data={categoryData} />
+            ) : (
+              <div className="p-6 text-center text-muted-foreground bg-card rounded-lg">
+                لا توجد مصروفات لعرضها
+              </div>
+            )}
           </div>
           <div className="animate-slide-up" style={{ animationDelay: "500ms" }}>
-            <RecentTransactions transactions={transactions} />
+            {transactions.length > 0 ? (
+              <RecentTransactions transactions={transactions} />
+            ) : (
+              <div className="p-6 text-center text-muted-foreground bg-card rounded-lg">
+                لا توجد معاملات حديثة
+              </div>
+            )}
           </div>
         </div>
 

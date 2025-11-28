@@ -5,31 +5,71 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Target, TrendingUp, Calendar, DollarSign } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+
+interface Goal {
+  id: string;
+  name: string;
+  target_amount: number;
+  current_amount: number;
+  duration_months: number;
+}
 
 const Goals = () => {
+  const { user } = useAuth();
   const { toast } = useToast();
+  const [goals, setGoals] = useState<Goal[]>([]);
+  const [loading, setLoading] = useState(true);
   const [showPlan, setShowPlan] = useState(false);
+  
+  // Form state
+  const [goalName, setGoalName] = useState("");
+  const [targetAmount, setTargetAmount] = useState("");
+  const [duration, setDuration] = useState("");
+  const [currentAmount, setCurrentAmount] = useState("");
 
-  const goals = [
-    {
-      id: 1,
-      name: "شراء لابتوب جديد",
-      target: 15000,
-      current: 8500,
-      duration: 6,
-      monthlyTarget: 1083,
-    },
-    {
-      id: 2,
-      name: "رحلة صيفية",
-      target: 8000,
-      current: 3200,
-      duration: 4,
-      monthlyTarget: 1200,
-    },
-  ];
+  useEffect(() => {
+    const fetchGoals = async () => {
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from("goals")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+
+      if (!error && data) {
+        setGoals(data);
+      }
+      setLoading(false);
+    };
+
+    fetchGoals();
+
+    // Subscribe to realtime changes
+    const channel = supabase
+      .channel("goals_changes")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "goals",
+          filter: `user_id=eq.${user?.id}`,
+        },
+        () => {
+          fetchGoals();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
 
   const handleGeneratePlan = () => {
     setShowPlan(true);
@@ -38,6 +78,44 @@ const Goals = () => {
       description: "تم تحليل وضعك المالي وإنشاء خطة مخصصة",
     });
   };
+
+  const handleSaveGoal = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    const { error } = await supabase.from("goals").insert({
+      user_id: user?.id,
+      name: goalName,
+      target_amount: parseFloat(targetAmount),
+      current_amount: parseFloat(currentAmount) || 0,
+      duration_months: parseInt(duration),
+    });
+
+    if (error) {
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ أثناء حفظ الهدف",
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "تم الحفظ بنجاح ✅",
+        description: "تم إضافة الهدف المالي الجديد",
+      });
+      // Reset form
+      setGoalName("");
+      setTargetAmount("");
+      setDuration("");
+      setCurrentAmount("");
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -50,81 +128,124 @@ const Goals = () => {
         </div>
 
         {/* الأهداف الحالية */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {goals.map((goal, index) => (
-            <Card key={goal.id} className="p-6 shadow-card animate-slide-up" style={{ animationDelay: `${index * 100}ms` }}>
-              <div className="flex items-start justify-between mb-4">
-                <div>
-                  <h3 className="text-xl font-semibold mb-1">{goal.name}</h3>
-                  <p className="text-sm text-muted-foreground">المدة: {goal.duration} شهور</p>
-                </div>
-                <div className="p-3 rounded-xl bg-primary/10 text-primary">
-                  <Target className="w-6 h-6" />
-                </div>
-              </div>
+        {goals.length > 0 && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            {goals.map((goal, index) => {
+              const progress = (goal.current_amount / goal.target_amount) * 100;
+              const monthlyTarget = (goal.target_amount - goal.current_amount) / goal.duration_months;
+              const remaining = goal.target_amount - goal.current_amount;
 
-              <div className="space-y-4">
-                <div>
-                  <div className="flex justify-between text-sm mb-2">
-                    <span className="font-medium">{goal.current} جنيه</span>
-                    <span className="text-muted-foreground">{goal.target} جنيه</span>
+              return (
+                <Card key={goal.id} className="p-6 shadow-card animate-slide-up" style={{ animationDelay: `${index * 100}ms` }}>
+                  <div className="flex items-start justify-between mb-4">
+                    <div>
+                      <h3 className="text-xl font-semibold mb-1">{goal.name}</h3>
+                      <p className="text-sm text-muted-foreground">المدة: {goal.duration_months} شهور</p>
+                    </div>
+                    <div className="p-3 rounded-xl bg-primary/10 text-primary">
+                      <Target className="w-6 h-6" />
+                    </div>
                   </div>
-                  <Progress value={(goal.current / goal.target) * 100} className="h-3" />
-                  <p className="text-sm text-muted-foreground mt-2">
-                    {Math.round((goal.current / goal.target) * 100)}% مكتمل
-                  </p>
-                </div>
 
-                <div className="grid grid-cols-2 gap-4 pt-4 border-t">
-                  <div className="text-center">
-                    <p className="text-sm text-muted-foreground mb-1">المطلوب شهرياً</p>
-                    <p className="text-lg font-semibold text-primary">{goal.monthlyTarget} جنيه</p>
+                  <div className="space-y-4">
+                    <div>
+                      <div className="flex justify-between text-sm mb-2">
+                        <span className="font-medium">{goal.current_amount.toLocaleString()} جنيه</span>
+                        <span className="text-muted-foreground">{goal.target_amount.toLocaleString()} جنيه</span>
+                      </div>
+                      <Progress value={progress} className="h-3" />
+                      <p className="text-sm text-muted-foreground mt-2">
+                        {progress.toFixed(1)}% مكتمل
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4 pt-4 border-t">
+                      <div className="text-center">
+                        <p className="text-sm text-muted-foreground mb-1">المطلوب شهرياً</p>
+                        <p className="text-lg font-semibold text-primary">{monthlyTarget.toLocaleString()} جنيه</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-sm text-muted-foreground mb-1">المتبقي</p>
+                        <p className="text-lg font-semibold">{remaining.toLocaleString()} جنيه</p>
+                      </div>
+                    </div>
                   </div>
-                  <div className="text-center">
-                    <p className="text-sm text-muted-foreground mb-1">المتبقي</p>
-                    <p className="text-lg font-semibold">{goal.target - goal.current} جنيه</p>
-                  </div>
-                </div>
-              </div>
-            </Card>
-          ))}
-        </div>
+                </Card>
+              );
+            })}
+          </div>
+        )}
 
         {/* إضافة هدف جديد */}
         <Card className="p-8 shadow-xl mb-8 animate-slide-up" style={{ animationDelay: "200ms" }}>
           <h2 className="text-2xl font-bold mb-6">إضافة هدف جديد</h2>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <Label htmlFor="goalName">اسم الهدف</Label>
-              <Input id="goalName" placeholder="مثلاً: شراء سيارة" className="text-right" />
+          <form onSubmit={handleSaveGoal}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="goalName">اسم الهدف</Label>
+                <Input
+                  id="goalName"
+                  placeholder="مثلاً: شراء سيارة"
+                  className="text-right"
+                  value={goalName}
+                  onChange={(e) => setGoalName(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="targetAmount">المبلغ المستهدف (جنيه)</Label>
+                <Input
+                  id="targetAmount"
+                  type="number"
+                  placeholder="0"
+                  className="text-right"
+                  value={targetAmount}
+                  onChange={(e) => setTargetAmount(e.target.value)}
+                  required
+                  min="0"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="duration">المدة (بالشهور)</Label>
+                <Input
+                  id="duration"
+                  type="number"
+                  placeholder="0"
+                  className="text-right"
+                  value={duration}
+                  onChange={(e) => setDuration(e.target.value)}
+                  required
+                  min="1"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="current">المبلغ الحالي (جنيه)</Label>
+                <Input
+                  id="current"
+                  type="number"
+                  placeholder="0"
+                  className="text-right"
+                  value={currentAmount}
+                  onChange={(e) => setCurrentAmount(e.target.value)}
+                  min="0"
+                />
+              </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="targetAmount">المبلغ المستهدف (جنيه)</Label>
-              <Input id="targetAmount" type="number" placeholder="0" className="text-right" />
+            <div className="flex gap-4 mt-6">
+              <Button type="button" onClick={handleGeneratePlan} className="flex-1 gradient-success shadow-lg">
+                <TrendingUp className="ml-2 w-5 h-5" />
+                إنشاء خطة ذكية
+              </Button>
+              <Button type="submit" variant="outline" className="flex-1">
+                حفظ الهدف
+              </Button>
             </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="duration">المدة (بالشهور)</Label>
-              <Input id="duration" type="number" placeholder="0" className="text-right" />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="current">المبلغ الحالي (جنيه)</Label>
-              <Input id="current" type="number" placeholder="0" className="text-right" />
-            </div>
-          </div>
-
-          <div className="flex gap-4 mt-6">
-            <Button onClick={handleGeneratePlan} className="flex-1 gradient-success shadow-lg">
-              <TrendingUp className="ml-2 w-5 h-5" />
-              إنشاء خطة ذكية
-            </Button>
-            <Button variant="outline" className="flex-1">
-              حفظ الهدف
-            </Button>
-          </div>
+          </form>
         </Card>
 
         {/* الخطة الذكية */}
