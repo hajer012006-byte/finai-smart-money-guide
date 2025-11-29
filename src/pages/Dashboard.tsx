@@ -17,29 +17,48 @@ interface Expense {
   date: string;
 }
 
+interface Profile {
+  full_name: string | null;
+  monthly_income: number;
+}
+
 const Dashboard = () => {
   const { user } = useAuth();
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchExpenses = async () => {
+    const fetchData = async () => {
       if (!user) return;
 
-      const { data, error } = await supabase
+      // Fetch expenses
+      const { data: expensesData } = await supabase
         .from("expenses")
         .select("*")
         .eq("user_id", user.id)
         .order("date", { ascending: false })
         .limit(10);
 
-      if (!error && data) {
-        setExpenses(data);
+      if (expensesData) {
+        setExpenses(expensesData);
       }
+
+      // Fetch profile
+      const { data: profileData } = await supabase
+        .from("profiles")
+        .select("full_name, monthly_income")
+        .eq("id", user.id)
+        .single();
+
+      if (profileData) {
+        setProfile(profileData);
+      }
+
       setLoading(false);
     };
 
-    fetchExpenses();
+    fetchData();
 
     // Subscribe to realtime changes
     const channel = supabase
@@ -53,7 +72,7 @@ const Dashboard = () => {
           filter: `user_id=eq.${user?.id}`,
         },
         () => {
-          fetchExpenses();
+          fetchData();
         }
       )
       .subscribe();
@@ -65,9 +84,12 @@ const Dashboard = () => {
 
   // Calculate statistics
   const totalExpenses = expenses.reduce((sum, exp) => sum + Number(exp.amount), 0);
-  const monthlyIncome = 5000; // This could be fetched from a separate table
+  const monthlyIncome = profile?.monthly_income || 0;
   const savings = monthlyIncome - totalExpenses;
   const savingsRate = monthlyIncome > 0 ? ((savings / monthlyIncome) * 100).toFixed(0) : 0;
+
+  // Get first name from full name
+  const firstName = profile?.full_name?.split(' ')[0] || 'صديقي';
 
   // Group expenses by category for chart
   const categoryData = expenses.reduce((acc: any[], exp) => {
@@ -135,7 +157,7 @@ const Dashboard = () => {
       
       <main className="container mx-auto px-4 pt-24 pb-8">
         <div className="mb-8 animate-fade-in">
-          <h1 className="text-3xl font-bold mb-2">مرحباً 👋</h1>
+          <h1 className="text-3xl font-bold mb-2">مرحباً {firstName} 👋</h1>
           <p className="text-muted-foreground">إليك ملخص وضعك المالي لهذا الشهر</p>
         </div>
 
