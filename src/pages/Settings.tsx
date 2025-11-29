@@ -179,7 +179,7 @@ const Settings = () => {
           </Card>
 
           <Card className="p-6 border-destructive/20 animate-slide-up" style={{ animationDelay: "100ms" }}>
-            <h2 className="text-xl font-semibold mb-4 text-destructive">منطقة الخطر</h2>
+            <h2 className="text-xl font-semibold mb-4 text-destructive">انتبه ⚠️</h2>
             <p className="text-muted-foreground mb-4">
               احذف جميع البيانات وابدأ من جديد. هذا الإجراء لا يمكن التراجع عنه.
             </p>

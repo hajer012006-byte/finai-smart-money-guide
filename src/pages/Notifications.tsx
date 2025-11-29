@@ -1,55 +1,57 @@
+import { useEffect, useState } from "react";
 import { Navbar } from "@/components/Navbar";
 import { Card } from "@/components/ui/card";
-import { AlertTriangle, TrendingUp, Bell, Zap, Target } from "lucide-react";
+import { AlertTriangle, TrendingUp, Bell, Zap, Target, Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { formatDistanceToNow } from "date-fns";
+import { ar } from "date-fns/locale";
 
 const Notifications = () => {
-  const notifications = [
-    {
-      id: 1,
-      type: "warning",
-      icon: AlertTriangle,
-      title: "اقتربت من تجاوز ميزانيتك",
-      description: "صرفت 80% من ميزانية الشهر. انتبه للإنفاق القادم.",
-      time: "منذ ساعتين",
-      color: "warning",
-    },
-    {
-      id: 2,
-      type: "success",
-      icon: TrendingUp,
-      title: "وفرت 300 جنيه أكثر من الشهر الماضي",
-      description: "استمر على هذا النهج الرائع! 👏",
-      time: "اليوم",
-      color: "success",
-    },
-    {
-      id: 3,
-      type: "reminder",
-      icon: Bell,
-      title: "فاتورة الكهرباء قادمة",
-      description: "فاضل أسبوع على موعد دفع الفاتورة (600 جنيه)",
-      time: "أمس",
-      color: "primary",
-    },
-    {
-      id: 4,
-      type: "tip",
-      icon: Zap,
-      title: "نصيحة ذكية",
-      description: "لو قللت مصروف المطاعم 10%، هتحقق هدفك أسرع بشهر.",
-      time: "منذ يومين",
-      color: "accent",
-    },
-    {
-      id: 5,
-      type: "goal",
-      icon: Target,
-      title: "اقتربت من تحقيق هدفك",
-      description: "بقى 2000 جنيه فقط لتحقيق هدف 'شراء لابتوب جديد'",
-      time: "منذ 3 أيام",
-      color: "success",
-    },
-  ];
+  const { user } = useAuth();
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (user) {
+      fetchNotifications();
+    }
+  }, [user]);
+
+  const fetchNotifications = async () => {
+    const { data, error } = await supabase
+      .from("notifications")
+      .select("*")
+      .eq("user_id", user?.id)
+      .order("created_at", { ascending: false });
+
+    if (!error && data) {
+      setNotifications(data);
+    }
+    setLoading(false);
+  };
+
+  const getIconComponent = (iconName: string) => {
+    const icons: Record<string, any> = {
+      AlertTriangle,
+      TrendingUp,
+      Bell,
+      Zap,
+      Target,
+    };
+    return icons[iconName] || Bell;
+  };
+
+  const getColorByType = (type: string) => {
+    const colorMap: Record<string, string> = {
+      warning: "warning",
+      success: "success",
+      reminder: "primary",
+      tip: "accent",
+      goal: "success",
+    };
+    return colorMap[type] || "primary";
+  };
 
   const colorClasses = {
     warning: "bg-warning/10 border-warning/20 hover:border-warning/40",
@@ -65,6 +67,19 @@ const Notifications = () => {
     accent: "text-accent",
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <main className="container mx-auto px-4 pt-24 pb-8">
+          <div className="flex items-center justify-center h-96">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -76,34 +91,47 @@ const Notifications = () => {
             <p className="text-muted-foreground">تابع التحديثات والتنبيهات الذكية</p>
           </div>
 
-          <div className="space-y-4">
-            {notifications.map((notification, index) => {
-              const Icon = notification.icon;
-              const colorClass = colorClasses[notification.color as keyof typeof colorClasses];
-              const iconColorClass = iconColorClasses[notification.color as keyof typeof iconColorClasses];
+          {notifications.length === 0 ? (
+            <Card className="p-12 text-center">
+              <Bell className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-50" />
+              <h3 className="text-xl font-semibold mb-2">لا توجد تنبيهات حالياً</h3>
+              <p className="text-muted-foreground">سنرسل لك التنبيهات المهمة هنا</p>
+            </Card>
+          ) : (
+            <div className="space-y-4">
+              {notifications.map((notification, index) => {
+                const Icon = getIconComponent(notification.icon);
+                const color = getColorByType(notification.type);
+                const colorClass = colorClasses[color as keyof typeof colorClasses];
+                const iconColorClass = iconColorClasses[color as keyof typeof iconColorClasses];
+                const timeAgo = formatDistanceToNow(new Date(notification.created_at), {
+                  addSuffix: true,
+                  locale: ar,
+                });
 
-              return (
-                <Card
-                  key={notification.id}
-                  className={`p-6 border-2 ${colorClass} transition-smooth hover:scale-105 animate-slide-up cursor-pointer`}
-                  style={{ animationDelay: `${index * 100}ms` }}
-                >
-                  <div className="flex items-start gap-4">
-                    <div className={`p-3 rounded-xl bg-card ${iconColorClass}`}>
-                      <Icon className="w-6 h-6" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-start justify-between mb-1">
-                        <h3 className="font-semibold text-lg">{notification.title}</h3>
-                        <span className="text-sm text-muted-foreground">{notification.time}</span>
+                return (
+                  <Card
+                    key={notification.id}
+                    className={`p-6 border-2 ${colorClass} transition-smooth hover:scale-105 animate-slide-up cursor-pointer`}
+                    style={{ animationDelay: `${index * 100}ms` }}
+                  >
+                    <div className="flex items-start gap-4">
+                      <div className={`p-3 rounded-xl bg-card ${iconColorClass}`}>
+                        <Icon className="w-6 h-6" />
                       </div>
-                      <p className="text-muted-foreground">{notification.description}</p>
+                      <div className="flex-1">
+                        <div className="flex items-start justify-between mb-1">
+                          <h3 className="font-semibold text-lg">{notification.title}</h3>
+                          <span className="text-sm text-muted-foreground">{timeAgo}</span>
+                        </div>
+                        <p className="text-muted-foreground">{notification.description}</p>
+                      </div>
                     </div>
-                  </div>
-                </Card>
-              );
-            })}
-          </div>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
         </div>
       </main>
     </div>
