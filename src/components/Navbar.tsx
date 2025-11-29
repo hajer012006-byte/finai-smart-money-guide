@@ -1,6 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Home, PlusCircle, Target, TrendingUp, Bell, LogOut } from "lucide-react";
+import { Home, PlusCircle, Target, TrendingUp, Bell, Settings, LogOut } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
 export const Navbar = () => {
@@ -78,6 +78,18 @@ export const Navbar = () => {
               <Link to="/notifications">
                 <Bell className="w-4 h-4 ml-2" />
                 التنبيهات
+              </Link>
+            </Button>
+
+            <Button
+              variant={isActive("/settings") ? "default" : "ghost"}
+              size="sm"
+              asChild
+              className={isActive("/settings") ? "gradient-primary" : ""}
+            >
+              <Link to="/settings">
+                <Settings className="w-4 h-4 ml-2" />
+                الإعدادات
               </Link>
             </Button>
 
