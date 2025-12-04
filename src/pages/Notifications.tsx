@@ -4,11 +4,13 @@ import { Card } from "@/components/ui/card";
 import { AlertTriangle, TrendingUp, Bell, Zap, Target, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { formatDistanceToNow } from "date-fns";
-import { ar } from "date-fns/locale";
+import { ar, enUS } from "date-fns/locale";
 
 const Notifications = () => {
   const { user } = useAuth();
+  const { t, language } = useLanguage();
   const [notifications, setNotifications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -87,15 +89,15 @@ const Notifications = () => {
       <main className="container mx-auto px-4 pt-24 pb-8">
         <div className="max-w-3xl mx-auto">
           <div className="mb-8 animate-fade-in">
-            <h1 className="text-3xl font-bold mb-2">التنبيهات</h1>
-            <p className="text-muted-foreground">تابع التحديثات والتنبيهات الذكية</p>
+            <h1 className="text-3xl font-bold mb-2">{t("التنبيهات", "Notifications")}</h1>
+            <p className="text-muted-foreground">{t("تابع التحديثات والتنبيهات الذكية", "Follow updates and smart alerts")}</p>
           </div>
 
           {notifications.length === 0 ? (
             <Card className="p-12 text-center">
               <Bell className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-50" />
-              <h3 className="text-xl font-semibold mb-2">لا توجد تنبيهات حالياً</h3>
-              <p className="text-muted-foreground">سنرسل لك التنبيهات المهمة هنا</p>
+              <h3 className="text-xl font-semibold mb-2">{t("لا توجد تنبيهات حالياً", "No notifications currently")}</h3>
+              <p className="text-muted-foreground">{t("سنرسل لك التنبيهات المهمة هنا", "We'll send you important alerts here")}</p>
             </Card>
           ) : (
             <div className="space-y-4">
@@ -106,7 +108,7 @@ const Notifications = () => {
                 const iconColorClass = iconColorClasses[color as keyof typeof iconColorClasses];
                 const timeAgo = formatDistanceToNow(new Date(notification.created_at), {
                   addSuffix: true,
-                  locale: ar,
+                  locale: language === "ar" ? ar : enUS,
                 });
 
                 return (

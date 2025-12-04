@@ -5,6 +5,7 @@ import { TrendingUp, TrendingDown, AlertCircle, CheckCircle, Loader2 } from "luc
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface Expense {
   id: string;
@@ -38,6 +39,7 @@ const Reports = () => {
   const [loading, setLoading] = useState(true);
   const [insights, setInsights] = useState<Insight[]>([]);
   const { toast } = useToast();
+  const { t, language } = useLanguage();
 
   useEffect(() => {
     fetchData();
@@ -59,12 +61,11 @@ const Reports = () => {
       setExpenses(expensesResult.data || []);
       setMonthlyIncome(profileResult.data?.monthly_income || 0);
       
-      // Generate AI insights
       await generateInsights(expensesResult.data || [], profileResult.data?.monthly_income || 0);
     } catch (error: any) {
       toast({
-        title: "خطأ",
-        description: "حدث خطأ في تحميل البيانات",
+        title: t("خطأ", "Error"),
+        description: t("حدث خطأ في تحميل البيانات", "An error occurred while loading data"),
         variant: "destructive",
       });
     } finally {
@@ -89,8 +90,11 @@ const Reports = () => {
     }
   };
 
+  const monthsAr = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
+  const monthsEn = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
   const getMonthlyData = (): MonthlyData[] => {
-    const months = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
+    const months = language === "ar" ? monthsAr : monthsEn;
     const last6Months = [];
     const now = new Date();
     
@@ -112,6 +116,13 @@ const Reports = () => {
     }
     
     return last6Months;
+  };
+
+  const categoriesMap: Record<string, { ar: string; en: string }> = {
+    "طعام": { ar: "طعام", en: "Food" },
+    "مواصلات": { ar: "مواصلات", en: "Transport" },
+    "فواتير": { ar: "فواتير", en: "Bills" },
+    "ترفيه": { ar: "ترفيه", en: "Entertainment" },
   };
 
   const getCategoryTrends = (): CategoryTrend[] => {
@@ -137,7 +148,7 @@ const Reports = () => {
         .reduce((sum, e) => sum + Number(e.amount), 0);
       
       return {
-        category,
+        category: language === "ar" ? categoriesMap[category].ar : categoriesMap[category].en,
         current: currentExpenses,
         previous: previousExpenses
       };
@@ -189,43 +200,40 @@ const Reports = () => {
       
       <main className="container mx-auto px-4 pt-24 pb-8">
         <div className="mb-8 animate-fade-in">
-          <h1 className="text-3xl font-bold mb-2">التقارير والإحصائيات</h1>
-          <p className="text-muted-foreground">تحليل ذكي لسلوكك المالي</p>
+          <h1 className="text-3xl font-bold mb-2">{t("التقارير والإحصائيات", "Reports & Statistics")}</h1>
+          <p className="text-muted-foreground">{t("تحليل ذكي لسلوكك المالي", "Smart analysis of your financial behavior")}</p>
         </div>
 
-        {/* الرسم البياني الخطي */}
         <Card className="p-6 shadow-card mb-8 animate-slide-up">
-          <h3 className="text-lg font-semibold mb-4">الدخل والمصروفات الشهرية</h3>
+          <h3 className="text-lg font-semibold mb-4">{t("الدخل والمصروفات الشهرية", "Monthly Income & Expenses")}</h3>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={monthlyData}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="month" />
               <YAxis />
               <Tooltip />
-              <Line type="monotone" dataKey="income" stroke="hsl(var(--success))" strokeWidth={3} name="الدخل" />
-              <Line type="monotone" dataKey="expenses" stroke="hsl(var(--destructive))" strokeWidth={3} name="المصروفات" />
+              <Line type="monotone" dataKey="income" stroke="hsl(var(--success))" strokeWidth={3} name={t("الدخل", "Income")} />
+              <Line type="monotone" dataKey="expenses" stroke="hsl(var(--destructive))" strokeWidth={3} name={t("المصروفات", "Expenses")} />
             </LineChart>
           </ResponsiveContainer>
         </Card>
 
-        {/* مقارنة الفئات */}
         <Card className="p-6 shadow-card mb-8 animate-slide-up" style={{ animationDelay: "100ms" }}>
-          <h3 className="text-lg font-semibold mb-4">مقارنة المصروفات بالشهر السابق</h3>
+          <h3 className="text-lg font-semibold mb-4">{t("مقارنة المصروفات بالشهر السابق", "Expenses Comparison with Last Month")}</h3>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={categoryTrends}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="category" />
               <YAxis />
               <Tooltip />
-              <Bar dataKey="previous" fill="hsl(var(--muted))" name="الشهر السابق" />
-              <Bar dataKey="current" fill="hsl(var(--primary))" name="الشهر الحالي" />
+              <Bar dataKey="previous" fill="hsl(var(--muted))" name={t("الشهر السابق", "Last Month")} />
+              <Bar dataKey="current" fill="hsl(var(--primary))" name={t("الشهر الحالي", "This Month")} />
             </BarChart>
           </ResponsiveContainer>
         </Card>
 
-        {/* الرؤى الذكية */}
         <div className="space-y-4 animate-slide-up" style={{ animationDelay: "200ms" }}>
-          <h2 className="text-2xl font-bold mb-4">رؤى ذكية 🤖</h2>
+          <h2 className="text-2xl font-bold mb-4">{t("رؤى ذكية", "Smart Insights")}</h2>
           {insights.map((insight, index) => {
             const Icon = insight.icon;
             const colorClasses = {
@@ -253,22 +261,21 @@ const Reports = () => {
           })}
         </div>
 
-        {/* إحصائيات إضافية */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8 animate-slide-up" style={{ animationDelay: "300ms" }}>
           <Card className="p-6 text-center shadow-card">
             <TrendingUp className="w-10 h-10 mx-auto mb-3 text-success" />
             <p className="text-2xl font-bold mb-1">{stats.savingsIncrease > "0" ? "+" : ""}{stats.savingsIncrease}%</p>
-            <p className="text-sm text-muted-foreground">زيادة في المدخرات</p>
+            <p className="text-sm text-muted-foreground">{t("زيادة في المدخرات", "Savings Increase")}</p>
           </Card>
           <Card className="p-6 text-center shadow-card">
             <TrendingDown className="w-10 h-10 mx-auto mb-3 text-destructive" />
             <p className="text-2xl font-bold mb-1">{stats.expenseDecrease > "0" ? "-" : ""}{stats.expenseDecrease}%</p>
-            <p className="text-sm text-muted-foreground">انخفاض في المصروفات</p>
+            <p className="text-sm text-muted-foreground">{t("انخفاض في المصروفات", "Expenses Decrease")}</p>
           </Card>
           <Card className="p-6 text-center shadow-card">
             <CheckCircle className="w-10 h-10 mx-auto mb-3 text-primary" />
             <p className="text-2xl font-bold mb-1">{stats.budgetCompliance}%</p>
-            <p className="text-sm text-muted-foreground">الالتزام بالميزانية</p>
+            <p className="text-sm text-muted-foreground">{t("الالتزام بالميزانية", "Budget Compliance")}</p>
           </Card>
         </div>
       </main>

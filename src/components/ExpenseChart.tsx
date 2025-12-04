@@ -1,5 +1,6 @@
 import { Card } from "@/components/ui/card";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const COLORS = {
   "طعام": "hsl(var(--warning))",
@@ -14,9 +15,11 @@ interface ExpenseChartProps {
 }
 
 export const ExpenseChart = ({ data }: ExpenseChartProps) => {
+  const { t } = useLanguage();
+
   return (
     <Card className="p-6 shadow-card">
-      <h3 className="text-lg font-semibold mb-4">توزيع المصروفات</h3>
+      <h3 className="text-lg font-semibold mb-4">{t("توزيع المصروفات", "Expenses Distribution")}</h3>
       <ResponsiveContainer width="100%" height={300}>
         <PieChart>
           <Pie

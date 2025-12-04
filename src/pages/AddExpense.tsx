@@ -8,12 +8,13 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
-import { ar } from "date-fns/locale";
+import { ar, enUS } from "date-fns/locale";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const AddExpense = () => {
   const [date, setDate] = useState<Date>(new Date());
@@ -24,6 +25,15 @@ const AddExpense = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { t, language } = useLanguage();
+
+  const categories = [
+    { value: "طعام", labelAr: "طعام", labelEn: "Food" },
+    { value: "مواصلات", labelAr: "مواصلات", labelEn: "Transportation" },
+    { value: "فواتير", labelAr: "فواتير", labelEn: "Bills" },
+    { value: "ترفيه", labelAr: "ترفيه", labelEn: "Entertainment" },
+    { value: "أخرى", labelAr: "أخرى", labelEn: "Other" },
+  ];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,14 +49,14 @@ const AddExpense = () => {
 
     if (error) {
       toast({
-        title: "خطأ",
-        description: "حدث خطأ أثناء حفظ المصروف",
+        title: t("خطأ", "Error"),
+        description: t("حدث خطأ أثناء حفظ المصروف", "An error occurred while saving the expense"),
         variant: "destructive",
       });
     } else {
       toast({
-        title: "تم الحفظ بنجاح ✅",
-        description: "تم إضافة المصروف الجديد",
+        title: t("تم الحفظ بنجاح", "Saved Successfully"),
+        description: t("تم إضافة المصروف الجديد", "New expense has been added"),
       });
       setTimeout(() => navigate("/"), 1500);
     }
@@ -61,42 +71,42 @@ const AddExpense = () => {
       <main className="container mx-auto px-4 pt-24 pb-8">
         <div className="max-w-2xl mx-auto">
           <div className="mb-8 animate-fade-in">
-            <h1 className="text-3xl font-bold mb-2">إضافة مصروف جديد</h1>
-            <p className="text-muted-foreground">أضف تفاصيل المصروف لتتبع نفقاتك</p>
+            <h1 className="text-3xl font-bold mb-2">{t("إضافة مصروف جديد", "Add New Expense")}</h1>
+            <p className="text-muted-foreground">{t("أضف تفاصيل المصروف لتتبع نفقاتك", "Add expense details to track your spending")}</p>
           </div>
 
           <Card className="p-8 shadow-xl animate-slide-up">
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="name">اسم المصروف</Label>
+                <Label htmlFor="name">{t("اسم المصروف", "Expense Name")}</Label>
                 <Input
                   id="name"
-                  placeholder="مثلاً: وجبة غداء"
+                  placeholder={t("مثلاً: وجبة غداء", "e.g., Lunch")}
                   required
-                  className="text-right"
+                  className={language === "ar" ? "text-right" : "text-left"}
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="category">الفئة</Label>
+                <Label htmlFor="category">{t("الفئة", "Category")}</Label>
                 <Select required value={category} onValueChange={setCategory}>
-                  <SelectTrigger className="text-right">
-                    <SelectValue placeholder="اختر الفئة" />
+                  <SelectTrigger className={language === "ar" ? "text-right" : "text-left"}>
+                    <SelectValue placeholder={t("اختر الفئة", "Select Category")} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="طعام">طعام</SelectItem>
-                    <SelectItem value="مواصلات">مواصلات</SelectItem>
-                    <SelectItem value="فواتير">فواتير</SelectItem>
-                    <SelectItem value="ترفيه">ترفيه</SelectItem>
-                    <SelectItem value="أخرى">أخرى</SelectItem>
+                    {categories.map((cat) => (
+                      <SelectItem key={cat.value} value={cat.value}>
+                        {language === "ar" ? cat.labelAr : cat.labelEn}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="amount">المبلغ (جنيه)</Label>
+                <Label htmlFor="amount">{t("المبلغ (جنيه)", "Amount (EGP)")}</Label>
                 <Input
                   id="amount"
                   type="number"
@@ -104,22 +114,22 @@ const AddExpense = () => {
                   required
                   min="0"
                   step="0.01"
-                  className="text-right"
+                  className={language === "ar" ? "text-right" : "text-left"}
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
                 />
               </div>
 
               <div className="space-y-2">
-                <Label>التاريخ</Label>
+                <Label>{t("التاريخ", "Date")}</Label>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button
                       variant="outline"
-                      className="w-full justify-start text-right font-normal"
+                      className={`w-full justify-start ${language === "ar" ? "text-right" : "text-left"} font-normal`}
                     >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {date ? format(date, "PPP", { locale: ar }) : <span>اختر التاريخ</span>}
+                      <CalendarIcon className={language === "ar" ? "mr-2 h-4 w-4" : "ml-2 h-4 w-4"} />
+                      {date ? format(date, "PPP", { locale: language === "ar" ? ar : enUS }) : <span>{t("اختر التاريخ", "Select Date")}</span>}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0">
@@ -135,10 +145,10 @@ const AddExpense = () => {
 
               <div className="flex gap-4 pt-4">
                 <Button type="submit" className="flex-1 gradient-primary shadow-lg" disabled={loading}>
-                  {loading ? "جاري الحفظ..." : "حفظ المصروف"}
+                  {loading ? t("جاري الحفظ...", "Saving...") : t("حفظ المصروف", "Save Expense")}
                 </Button>
                 <Button type="button" variant="outline" className="flex-1" onClick={() => navigate("/")}>
-                  إلغاء
+                  {t("إلغاء", "Cancel")}
                 </Button>
               </div>
             </form>

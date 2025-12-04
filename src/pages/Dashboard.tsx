@@ -8,6 +8,7 @@ import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface Expense {
   id: string;
@@ -24,6 +25,7 @@ interface Profile {
 
 const Dashboard = () => {
   const { user } = useAuth();
+  const { t, language } = useLanguage();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -32,7 +34,6 @@ const Dashboard = () => {
     const fetchData = async () => {
       if (!user) return;
 
-      // Fetch expenses
       const { data: expensesData } = await supabase
         .from("expenses")
         .select("*")
@@ -44,7 +45,6 @@ const Dashboard = () => {
         setExpenses(expensesData);
       }
 
-      // Fetch profile
       const { data: profileData } = await supabase
         .from("profiles")
         .select("full_name, monthly_income")
@@ -60,7 +60,6 @@ const Dashboard = () => {
 
     fetchData();
 
-    // Subscribe to realtime changes
     const channel = supabase
       .channel("expenses_changes")
       .on(
@@ -82,16 +81,13 @@ const Dashboard = () => {
     };
   }, [user]);
 
-  // Calculate statistics
   const totalExpenses = expenses.reduce((sum, exp) => sum + Number(exp.amount), 0);
   const monthlyIncome = profile?.monthly_income || 0;
   const savings = monthlyIncome - totalExpenses;
   const savingsRate = monthlyIncome > 0 ? ((savings / monthlyIncome) * 100).toFixed(0) : 0;
 
-  // Get first name from full name
-  const firstName = profile?.full_name?.split(' ')[0] || 'صديقي';
+  const firstName = profile?.full_name?.split(' ')[0] || t('صديقي', 'Friend');
 
-  // Group expenses by category for chart
   const categoryData = expenses.reduce((acc: any[], exp) => {
     const existing = acc.find((item) => item.name === exp.category);
     if (existing) {
@@ -102,40 +98,41 @@ const Dashboard = () => {
     return acc;
   }, []);
 
-  // Format transactions for RecentTransactions component
   const transactions = expenses.map((exp) => ({
     id: exp.id,
     name: exp.name,
     category: exp.category,
     amount: Number(exp.amount),
-    date: new Date(exp.date).toLocaleDateString("ar-EG"),
+    date: new Date(exp.date).toLocaleDateString(language === "ar" ? "ar-EG" : "en-US"),
     type: "expense" as const,
   }));
 
+  const currency = t("جنيه", "EGP");
+
   const stats = [
     {
-      title: "إجمالي الدخل",
-      value: `${monthlyIncome.toLocaleString()} جنيه`,
+      title: t("إجمالي الدخل", "Total Income"),
+      value: `${monthlyIncome.toLocaleString()} ${currency}`,
       icon: Wallet,
       trend: { value: "12%", isPositive: true },
       variant: "success" as const,
     },
     {
-      title: "إجمالي المصروفات",
-      value: `${totalExpenses.toLocaleString()} جنيه`,
+      title: t("إجمالي المصروفات", "Total Expenses"),
+      value: `${totalExpenses.toLocaleString()} ${currency}`,
       icon: TrendingDown,
       trend: { value: "5%", isPositive: false },
       variant: "danger" as const,
     },
     {
-      title: "المدخرات المتوقعة",
-      value: `${savings.toLocaleString()} جنيه`,
+      title: t("المدخرات المتوقعة", "Expected Savings"),
+      value: `${savings.toLocaleString()} ${currency}`,
       icon: PiggyBank,
       trend: { value: "18%", isPositive: true },
       variant: "success" as const,
     },
     {
-      title: "نسبة الادخار",
+      title: t("نسبة الادخار", "Savings Rate"),
       value: `${savingsRate}%`,
       icon: TrendingUp,
       trend: { value: "3%", isPositive: true },
@@ -157,11 +154,10 @@ const Dashboard = () => {
       
       <main className="container mx-auto px-4 pt-24 pb-8">
         <div className="mb-8 animate-fade-in">
-          <h1 className="text-3xl font-bold mb-2">مرحباً {firstName}</h1>
-          <p className="text-muted-foreground">إليك ملخص وضعك المالي لهذا الشهر</p>
+          <h1 className="text-3xl font-bold mb-2">{t("مرحباً", "Hello")} {firstName}</h1>
+          <p className="text-muted-foreground">{t("إليك ملخص وضعك المالي لهذا الشهر", "Here's your financial summary for this month")}</p>
         </div>
 
-        {/* الإحصائيات */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {stats.map((stat, index) => (
             <div key={index} style={{ animationDelay: `${index * 100}ms` }}>
@@ -170,14 +166,13 @@ const Dashboard = () => {
           ))}
         </div>
 
-        {/* الرسوم البيانية والمعاملات */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           <div className="animate-slide-up" style={{ animationDelay: "400ms" }}>
             {categoryData.length > 0 ? (
               <ExpenseChart data={categoryData} />
             ) : (
               <div className="p-6 text-center text-muted-foreground bg-card rounded-lg">
-                لا توجد مصروفات لعرضها
+                {t("لا توجد مصروفات لعرضها", "No expenses to display")}
               </div>
             )}
           </div>
@@ -186,27 +181,26 @@ const Dashboard = () => {
               <RecentTransactions transactions={transactions} />
             ) : (
               <div className="p-6 text-center text-muted-foreground bg-card rounded-lg">
-                لا توجد معاملات حديثة
+                {t("لا توجد معاملات حديثة", "No recent transactions")}
               </div>
             )}
           </div>
         </div>
 
-        {/* أزرار سريعة */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 animate-slide-up" style={{ animationDelay: "600ms" }}>
           <Button asChild size="lg" className="gradient-primary h-16 text-lg shadow-lg hover:shadow-xl transition-smooth">
             <Link to="/add-expense">
-              إضافة مصروف جديد
+              {t("إضافة مصروف جديد", "Add New Expense")}
             </Link>
           </Button>
           <Button asChild size="lg" variant="outline" className="h-16 text-lg border-2 hover:border-primary transition-smooth">
             <Link to="/goals">
-              عرض أهدافي
+              {t("عرض أهدافي", "View My Goals")}
             </Link>
           </Button>
           <Button asChild size="lg" variant="outline" className="h-16 text-lg border-2 hover:border-primary transition-smooth">
             <Link to="/reports">
-              التقارير الذكية
+              {t("التقارير الذكية", "Smart Reports")}
             </Link>
           </Button>
         </div>

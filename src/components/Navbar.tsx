@@ -2,12 +2,16 @@ import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Home, PlusCircle, Target, TrendingUp, Bell, Settings, LogOut } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 export const Navbar = () => {
   const location = useLocation();
   const { signOut } = useAuth();
+  const { t, language } = useLanguage();
 
   const isActive = (path: string) => location.pathname === path;
+
+  const iconMargin = language === "ar" ? "ml-2" : "mr-2";
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-card/80 backdrop-blur-md border-b shadow-sm">
@@ -28,8 +32,8 @@ export const Navbar = () => {
               className={isActive("/") ? "gradient-primary" : ""}
             >
               <Link to="/">
-                <Home className="w-4 h-4 ml-2" />
-                الرئيسية
+                <Home className={`w-4 h-4 ${iconMargin}`} />
+                {t("الرئيسية", "Home")}
               </Link>
             </Button>
 
@@ -40,8 +44,8 @@ export const Navbar = () => {
               className={isActive("/add-expense") ? "gradient-primary" : ""}
             >
               <Link to="/add-expense">
-                <PlusCircle className="w-4 h-4 ml-2" />
-                إضافة
+                <PlusCircle className={`w-4 h-4 ${iconMargin}`} />
+                {t("إضافة", "Add")}
               </Link>
             </Button>
 
@@ -52,8 +56,8 @@ export const Navbar = () => {
               className={isActive("/goals") ? "gradient-primary" : ""}
             >
               <Link to="/goals">
-                <Target className="w-4 h-4 ml-2" />
-                الأهداف
+                <Target className={`w-4 h-4 ${iconMargin}`} />
+                {t("الأهداف", "Goals")}
               </Link>
             </Button>
 
@@ -64,8 +68,8 @@ export const Navbar = () => {
               className={isActive("/reports") ? "gradient-primary" : ""}
             >
               <Link to="/reports">
-                <TrendingUp className="w-4 h-4 ml-2" />
-                التقارير
+                <TrendingUp className={`w-4 h-4 ${iconMargin}`} />
+                {t("التقارير", "Reports")}
               </Link>
             </Button>
 
@@ -76,8 +80,8 @@ export const Navbar = () => {
               className={isActive("/notifications") ? "gradient-primary" : ""}
             >
               <Link to="/notifications">
-                <Bell className="w-4 h-4 ml-2" />
-                التنبيهات
+                <Bell className={`w-4 h-4 ${iconMargin}`} />
+                {t("التنبيهات", "Alerts")}
               </Link>
             </Button>
 
@@ -88,8 +92,8 @@ export const Navbar = () => {
               className={isActive("/settings") ? "gradient-primary" : ""}
             >
               <Link to="/settings">
-                <Settings className="w-4 h-4 ml-2" />
-                الإعدادات
+                <Settings className={`w-4 h-4 ${iconMargin}`} />
+                {t("الإعدادات", "Settings")}
               </Link>
             </Button>
 
@@ -98,8 +102,8 @@ export const Navbar = () => {
               size="sm"
               onClick={signOut}
             >
-              <LogOut className="w-4 h-4 ml-2" />
-              خروج
+              <LogOut className={`w-4 h-4 ${iconMargin}`} />
+              {t("خروج", "Logout")}
             </Button>
           </div>
         </div>
