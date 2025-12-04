@@ -1,10 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -14,20 +13,10 @@ const Auth = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
-  const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
   const { signIn, signUp, user } = useAuth();
-
-  // Load saved email if exists
-  useEffect(() => {
-    const savedEmail = localStorage.getItem("rememberedEmail");
-    if (savedEmail) {
-      setEmail(savedEmail);
-      setRememberMe(true);
-    }
-  }, []);
 
   // Redirect if already logged in
   if (user) {
@@ -50,15 +39,8 @@ const Auth = () => {
         variant: "destructive",
       });
     } else {
-      // Save email if remember me is checked
-      if (rememberMe) {
-        localStorage.setItem("rememberedEmail", email);
-      } else {
-        localStorage.removeItem("rememberedEmail");
-      }
-      
       toast({
-        title: "تم تسجيل الدخول بنجاح ✅",
+        title: "تم تسجيل الدخول بنجاح",
         description: "مرحباً بك مرة أخرى",
       });
       navigate("/");
@@ -83,7 +65,7 @@ const Auth = () => {
       });
     } else {
       toast({
-        title: "تم إنشاء الحساب بنجاح ✅",
+        title: "تم إنشاء الحساب بنجاح",
         description: "يمكنك الآن تسجيل الدخول",
       });
       setIsLogin(true);
@@ -96,7 +78,7 @@ const Auth = () => {
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <Card className="w-full max-w-md p-8 shadow-xl">
         <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold mb-2">💰 تطبيق المصروفات</h1>
+          <h1 className="text-3xl font-bold mb-2">تطبيق المصروفات</h1>
           <p className="text-muted-foreground">إدارة مصروفاتك بذكاء</p>
         </div>
 
@@ -136,20 +118,6 @@ const Auth = () => {
                 />
               </div>
 
-              <div className="flex items-center space-x-2 space-x-reverse">
-                <Checkbox 
-                  id="remember-me" 
-                  checked={rememberMe}
-                  onCheckedChange={(checked) => setRememberMe(checked as boolean)}
-                />
-                <Label 
-                  htmlFor="remember-me" 
-                  className="text-sm font-normal cursor-pointer"
-                >
-                  تذكر البريد الإلكتروني
-                </Label>
-              </div>
-
               <Button type="submit" className="w-full gradient-primary" disabled={loading}>
                 {loading ? "جاري تسجيل الدخول..." : "تسجيل الدخول"}
               </Button>
@@ -163,7 +131,7 @@ const Auth = () => {
                 <Input
                   id="signup-name"
                   type="text"
-                  placeholder="أحمد محمد"
+                  placeholder="هاجر"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   required
