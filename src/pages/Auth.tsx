@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const Auth = () => {
@@ -17,8 +18,8 @@ const Auth = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const { signIn, signUp, user } = useAuth();
+  const { t, language } = useLanguage();
 
-  // Redirect if already logged in
   if (user) {
     navigate("/");
     return null;
@@ -32,16 +33,16 @@ const Auth = () => {
 
     if (error) {
       toast({
-        title: "خطأ في تسجيل الدخول",
+        title: t("خطأ في تسجيل الدخول", "Login Error"),
         description: error.message === "Invalid login credentials" 
-          ? "البريد الإلكتروني أو كلمة المرور غير صحيحة"
+          ? t("البريد الإلكتروني أو كلمة المرور غير صحيحة", "Invalid email or password")
           : error.message,
         variant: "destructive",
       });
     } else {
       toast({
-        title: "تم تسجيل الدخول بنجاح",
-        description: "مرحباً بك مرة أخرى",
+        title: t("تم تسجيل الدخول بنجاح", "Login Successful"),
+        description: t("مرحباً بك مرة أخرى", "Welcome back"),
       });
       navigate("/");
     }
@@ -57,16 +58,16 @@ const Auth = () => {
 
     if (error) {
       toast({
-        title: "خطأ في إنشاء الحساب",
+        title: t("خطأ في إنشاء الحساب", "Signup Error"),
         description: error.message === "User already registered"
-          ? "هذا البريد الإلكتروني مسجل بالفعل"
+          ? t("هذا البريد الإلكتروني مسجل بالفعل", "This email is already registered")
           : error.message,
         variant: "destructive",
       });
     } else {
       toast({
-        title: "تم إنشاء الحساب بنجاح",
-        description: "يمكنك الآن تسجيل الدخول",
+        title: t("تم إنشاء الحساب بنجاح", "Account Created Successfully"),
+        description: t("يمكنك الآن تسجيل الدخول", "You can now log in"),
       });
       setIsLogin(true);
     }
@@ -78,20 +79,20 @@ const Auth = () => {
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <Card className="w-full max-w-md p-8 shadow-xl">
         <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold mb-2">تطبيق المصروفات</h1>
-          <p className="text-muted-foreground">إدارة مصروفاتك بذكاء</p>
+          <h1 className="text-3xl font-bold mb-2">{t("تطبيق المصروفات", "Expense App")}</h1>
+          <p className="text-muted-foreground">{t("إدارة مصروفاتك بذكاء", "Manage your expenses smartly")}</p>
         </div>
 
         <Tabs value={isLogin ? "login" : "signup"} onValueChange={(v) => setIsLogin(v === "login")}>
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="login">تسجيل الدخول</TabsTrigger>
-            <TabsTrigger value="signup">إنشاء حساب</TabsTrigger>
+            <TabsTrigger value="login">{t("تسجيل الدخول", "Login")}</TabsTrigger>
+            <TabsTrigger value="signup">{t("إنشاء حساب", "Sign Up")}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="login">
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="login-email">البريد الإلكتروني</Label>
+                <Label htmlFor="login-email">{t("البريد الإلكتروني", "Email")}</Label>
                 <Input
                   id="login-email"
                   type="email"
@@ -99,13 +100,13 @@ const Auth = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="text-right"
+                  className={language === "ar" ? "text-right" : "text-left"}
                   dir="ltr"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="login-password">كلمة المرور</Label>
+                <Label htmlFor="login-password">{t("كلمة المرور", "Password")}</Label>
                 <Input
                   id="login-password"
                   type="password"
@@ -113,13 +114,13 @@ const Auth = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="text-right"
+                  className={language === "ar" ? "text-right" : "text-left"}
                   dir="ltr"
                 />
               </div>
 
               <Button type="submit" className="w-full gradient-primary" disabled={loading}>
-                {loading ? "جاري تسجيل الدخول..." : "تسجيل الدخول"}
+                {loading ? t("جاري تسجيل الدخول...", "Logging in...") : t("تسجيل الدخول", "Login")}
               </Button>
             </form>
           </TabsContent>
@@ -127,20 +128,20 @@ const Auth = () => {
           <TabsContent value="signup">
             <form onSubmit={handleSignup} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="signup-name">الاسم الكامل</Label>
+                <Label htmlFor="signup-name">{t("الاسم الكامل", "Full Name")}</Label>
                 <Input
                   id="signup-name"
                   type="text"
-                  placeholder="هاجر"
+                  placeholder={t("هاجر", "Hagar")}
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   required
-                  className="text-right"
+                  className={language === "ar" ? "text-right" : "text-left"}
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="signup-email">البريد الإلكتروني</Label>
+                <Label htmlFor="signup-email">{t("البريد الإلكتروني", "Email")}</Label>
                 <Input
                   id="signup-email"
                   type="email"
@@ -148,13 +149,13 @@ const Auth = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="text-right"
+                  className={language === "ar" ? "text-right" : "text-left"}
                   dir="ltr"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="signup-password">كلمة المرور</Label>
+                <Label htmlFor="signup-password">{t("كلمة المرور", "Password")}</Label>
                 <Input
                   id="signup-password"
                   type="password"
@@ -163,13 +164,13 @@ const Auth = () => {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   minLength={6}
-                  className="text-right"
+                  className={language === "ar" ? "text-right" : "text-left"}
                   dir="ltr"
                 />
               </div>
 
               <Button type="submit" className="w-full gradient-primary" disabled={loading}>
-                {loading ? "جاري إنشاء الحساب..." : "إنشاء حساب"}
+                {loading ? t("جاري إنشاء الحساب...", "Creating account...") : t("إنشاء حساب", "Sign Up")}
               </Button>
             </form>
           </TabsContent>
